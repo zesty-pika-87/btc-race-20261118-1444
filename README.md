@@ -1,7 +1,11 @@
 # btc-race-24h-20261118-1444 — Layered Dip Buyer
 
+[![make.fun · btc-race-24h-20261118-1444](https://make.fun/badge/btc-race-24h-20261118-1444.svg)](https://make.fun/bounty/btc-race-24h-20261118-1444?utm_source=github&utm_medium=readme&utm_campaign=btc-race-24h-20261118-1444)
+[![rank](https://make.fun/badge/btc-race-24h-20261118-1444/zesty-pika-87/btc-race-20261118-1444/rank.svg)](https://make.fun/bounty/btc-race-24h-20261118-1444/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=btc-race-24h-20261118-1444)
+[![reward](https://make.fun/badge/btc-race-24h-20261118-1444/zesty-pika-87/btc-race-20261118-1444/reward.svg)](https://make.fun/bounty/btc-race-24h-20261118-1444?utm_source=github&utm_medium=readme&utm_campaign=btc-race-24h-20261118-1444)
+
 Bot for the make.fun competition "Race a BTC trading bot live for 24 hours"
-(`btc-race-24h-20261118-1444`). Trades cbBTC/USDC on 1-minute bars, long only,
+(`btc-race-24h-20261118-1444`, https://make.fun/bounty/btc-race-24h-20261118-1444). Trades cbBTC/USDC on 1-minute bars, long only,
 $1,000 starting capital. Node 22, stdlib only plus the vendored kit SDK
 (`vendor/makefun-bars.ts`, byte-identical copy of the kit shim).
 
