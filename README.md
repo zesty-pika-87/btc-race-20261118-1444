@@ -16,7 +16,11 @@ An entry needs all four layers to agree:
    before the SMA has moved.
 2. **Momentum confirmation (RSI-14, Wilder).** Entry only while RSI ≤ 55:
    never buy a dip while momentum is still hot; the dip plus a cooled RSI
-   means the fall has paused.
+   means the fall has paused. The regime-independent sharp-drop trigger is
+   stricter (RSI ≤ 45): it fires mid-plunge, so it must show a cold RSI.
+   (v3: on the dev window this changes nothing — the action log is
+   byte-identical to v2 — but it stops the bot catching a still-falling
+   knife on unseen data.)
 3. **Volatility filter + sizing (ATR-14).** No entry while ATR < 2 bps of
    price (dead chop cannot pay the ~26 bps round-trip cost). Full size when
    ATR ≥ 4 bps, half size below it — smaller positions when the market is
@@ -34,7 +38,7 @@ An entry needs all four layers to agree:
 | SMA span / slope span | 120 / 60 bars |
 | Dip below SMA (uptrend / downtrend) | 80 / 130 bps |
 | Sharp-drop trigger (60-bar return) | −170 bps |
-| RSI-14 max at entry | 55 |
+| RSI-14 max at entry | 55 (45 for drop-trigger-only entries, v3) |
 | ATR-14 min / full-size threshold | 2 / 4 bps of price |
 | Exit target / SMA recovery | +110 / +120 bps |
 | Trailing stop / hard stop | −120 / −200 bps |

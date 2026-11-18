@@ -11,6 +11,8 @@
 //   2. Momentum confirmation: RSI-14 (Wilder) must be <= 55 at entry —
 //      never buy a dip while momentum is still hot/overbought; the dip
 //      itself plus a cooled RSI means the fall has paused, not accelerated.
+//      The regime-independent sharp-drop trigger is stricter (RSI <= 45):
+//      it fires mid-plunge, so it must show a cold RSI, not just "not hot".
 //   3. Volatility filter + sizing: ATR-14 (true range, bps of price).
 //      No entry when ATR < 2 bps (dead chop, no move to pay the ~26 bps
 //      round-trip cost). Full size when ATR >= 4 bps, half size below it:
@@ -41,7 +43,9 @@ import { runBars, type BarsState, type Batch, type OrderInput } from './vendor/m
 const SYMBOL = 'CBBTC';
 const SMA_SPAN = 120;
 const SLOPE_SPAN = 60;
-/** Dip below SMA-120 that triggers an entry, in bps of the SMA (base value). */
+/** Dip below SMA-120 that triggers an entry, in bps of the SMA. Fallback
+    while no 60-bar slope history exists yet; afterwards the regime-specific
+    DIP_UPTREND_BPS / DIP_DOWNTREND_BPS take over. */
 const DIP_BPS = 110;
 /** Dip when the SMA-120 slope over SLOPE_SPAN bars is >= 0 (flat/rising). */
 const DIP_UPTREND_BPS = 80;
@@ -49,8 +53,12 @@ const DIP_UPTREND_BPS = 80;
 const DIP_DOWNTREND_BPS = 130;
 /** Sharp-drop trigger: 60-bar return below this (bps) also triggers an entry. */
 const DROP60_BPS = 170;
-/** Entry only while RSI-14 is at or below this. */
+/** Entry only while RSI-14 is at or below this (dip-trigger entries). */
 const RSI_MAX = 55;
+/** Stricter RSI cap for drop-trigger-only entries: the sharp-drop trigger
+    fires mid-plunge, so it must also show a cold RSI (the fall has paused),
+    not just "not overbought". Dip-trigger entries keep RSI_MAX. */
+const RSI_DROP_MAX = 45;
 /** No entry while ATR-14 is below this (bps of price): dead chop. */
 const ATR_MIN_BPS = 2;
 /** Full size when ATR-14 is at or above this (bps); half size below it. */
@@ -172,7 +180,10 @@ await runBars({
     if (!dipTrigger && !dropTrigger) return [];
     if (n - lastExitBar < COOLDOWN_BARS) return [];
     const r = rsi();
-    if (r !== null && r > RSI_MAX) return [];
+    // A drop-trigger-only entry fires mid-plunge, so it needs a colder RSI
+    // than a dip-trigger entry (whose deep dislocation already filters).
+    const rsiCap = dropTrigger && !dipTrigger ? RSI_DROP_MAX : RSI_MAX;
+    if (r !== null && r > rsiCap) return [];
     const atr = atrBps(c);
     if (atr !== null && atr < ATR_MIN_BPS) return [];
     // Volatility sizing: half size in quiet markets, full size when ATR is ample.
