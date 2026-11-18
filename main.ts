@@ -16,17 +16,22 @@
 //      round-trip cost). Full size when ATR >= 4 bps, half size below it:
 //      smaller positions when the market is quiet, so a false bounce
 //      costs less, and impact (which scales with size / pool depth) stays low.
-//   4. Risk management: exit on the first of — +100 bps from entry close,
+//   4. Risk management: exit on the first of — +110 bps from entry close,
 //      close back above SMA-120 + 120 bps (mean reversion complete),
 //      -120 bps trailing from the highest close since entry, or -200 bps
-//      hard stop from entry close. One position, full size at most, long only.
+//      hard stop from entry close. After any exit, a 30-bar cooldown blocks
+//      re-entry, so the bot cannot re-buy the same falling dip bar after bar.
+//      One position, full size at most, long only.
 //
 // The dev window is a falling range (buy-and-hold about -$28, EMA-cross
 // about -$130 in offline simulation): almost every naive rule loses, and
 // the profit comes from 2-3 deep-dip bounces. Parameters were chosen on a
-// plateau, not a peak: dip 100-120, drop 160-180, target 100, trail 120,
-// stop 200-300 and RSI cap 50-65 all give roughly the same offline result,
-// so the bot is not tuned to one lucky point (see README robustness table).
+// plateau, not a peak — target 100 and 110 bps give byte-identical action
+// logs on the dev window, dip 100-120 / drop 160-180 / RSI cap 50-65 all
+// give roughly the same offline result, and a 120 bps target was REJECTED
+// even though it scored higher (+$17.15): its gain rests on one bounce
+// clearing 120 bps, and at 130 bps the same bot goes negative (-$4.62),
+// so 110 bps is the robust middle of the plateau (see README).
 //
 // Deterministic: float64 closes in fixed order, no clock, no randomness,
 // no network, no files outside this repository.
@@ -51,13 +56,15 @@ const ATR_MIN_BPS = 2;
 /** Full size when ATR-14 is at or above this (bps); half size below it. */
 const ATR_FULL_BPS = 4;
 /** Exit: close at or above entry close by this (bps). */
-const TARGET_BPS = 100;
+const TARGET_BPS = 110;
 /** Exit: close at or above SMA-120 by this (bps). */
 const RECOVER_BPS = 120;
 /** Exit: close below the highest close since entry by this (bps). */
 const TRAIL_BPS = 120;
 /** Exit: close below the entry close by this (bps). */
 const HARD_STOP_BPS = 200;
+/** Bars to wait after an exit before a new entry is allowed. */
+const COOLDOWN_BARS = 30;
 /** Slippage cap on every order, 3% past the close it was decided on. */
 const MAX_SLIPPAGE_BPS = 300;
 const RSI_SPAN = 14;
@@ -78,6 +85,8 @@ let trSum = 0;
 /** Entry close and highest close since entry, while a position is held. */
 let entry = 0;
 let high = 0;
+/** Bar index of the last exit; re-entry is blocked for COOLDOWN_BARS after it. */
+let lastExitBar = -1000;
 
 function smaAt(end: number, span: number): number | null {
   if (end < span - 1) return null;
@@ -143,6 +152,7 @@ await runBars({
       const trail = c < (high * (10000 - TRAIL_BPS)) / 10000;
       const stop = c < (entry * (10000 - HARD_STOP_BPS)) / 10000;
       if (target || recover || trail || stop) {
+        lastExitBar = n;
         return [{ side: 'sell', symbol: SYMBOL, qty: held.qty, max_slippage_bps: MAX_SLIPPAGE_BPS }];
       }
       return [];
@@ -160,6 +170,7 @@ await runBars({
     let dropTrigger = false;
     if (n >= SLOPE_SPAN) dropTrigger = (c / closes[n - SLOPE_SPAN] - 1) * 10000 < -DROP60_BPS;
     if (!dipTrigger && !dropTrigger) return [];
+    if (n - lastExitBar < COOLDOWN_BARS) return [];
     const r = rsi();
     if (r !== null && r > RSI_MAX) return [];
     const atr = atrBps(c);
